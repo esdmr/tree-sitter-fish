@@ -1,19 +1,18 @@
 {
-  "name": "tree-sitter-fish",
-  "version": "3.5.1",
+  "name": "@esdmr/tree-sitter-fish",
+  "version": "3.5.2-0+a78aef9",
   "description": "Fish tree-sitter grammar",
-  "main": "bindings/node",
-  "types": "bindings/node",
+  "main": "tree-sitter-fish.wasm",
+  "exports": {
+    ".": "./tree-sitter-fish.wasm",
+    "./tree-sitter-fish.wasm": "./tree-sitter-fish.wasm",
+    "./package.json": "./package.json"
+  },
+  "files": ["tree-sitter-fish.wasm"],
   "scripts": {
     "build": "tsc -p tsconfig.json && tree-sitter generate",
     "build:wasm": "npm run build && tree-sitter build-wasm",
-    "start": "npm run build:wasm && tree-sitter web-ui",
-    "test": "tree-sitter test",
-    "test:watch": "nodemon --ext ts,txt,fish,scm --watch grammar.ts --watch test --watch queries --exec 'npm run build && npm run test'",
-    "test:examples": "bash ./scripts/test_shared.sh",
-    "test:dev": "nodemon --ext fish --watch test.fish --watch grammar.ts --exec 'npm run build && tree-sitter parse ./test.fish -d'",
-    "install": "node-gyp-build",
-    "prebuildify": "prebuildify --napi --strip"
+    "start": "npm run build:wasm && tree-sitter web-ui"
   },
   "keywords": [
     "tree-sitter",
@@ -21,41 +20,19 @@
     "shell",
     "parser"
   ],
-  "files": [
-    "grammar.js",
-    "binding.gyp",
-    "prebuilds/**",
-    "bindings/node/*",
-    "queries/*",
-    "src/**"
-  ],
   "author": "Krnik",
-  "dependencies": {
-    "node-addon-api": "^7.1.0",
-    "node-gyp-build": "^4.8.0"
-  },
-  "peerDependencies": {
-    "tree-sitter": "^0.21.0"
-  },
-  "peerDependenciesMeta": {
-    "tree_sitter": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@types/node": "^18.11.9",
-    "nodemon": "^2.0.7",
     "tree-sitter-cli": "^0.20.7",
-    "typescript": "^4.9.3",
-    "prebuildify": "^6.0.0"
+    "typescript": "^4.9.3"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ram02z/tree-sitter-fish.git"
+    "url": "git+https://github.com/esdmr/tree-sitter-fish.git"
   },
-  "homepage": "https://github.com/ram02z/tree-sitter-fish#readme",
+  "homepage": "https://github.com/esdmr/tree-sitter-fish#readme",
   "bugs": {
-    "url": "https://github.com/ram02z/tree-sitter-fish/issues"
+    "url": "https://github.com/esdmr/tree-sitter-fish/issues"
   },
   "tree-sitter": [
     {
