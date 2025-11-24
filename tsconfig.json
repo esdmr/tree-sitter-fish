@@ -2,7 +2,7 @@
     "compilerOptions": {
         "strict": true,
         "target": "es2020",
-        "moduleResolution": "nodenext"
+        "moduleResolution": "node"
     },
     "files": [
         "./grammar.ts",

@@ -1,0 +1,126 @@
+name: Sync Upstream and Republish
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  sync-and-republish:
+    name: Sync Upstream
+    runs-on: ubuntu-latest
+    environment: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          repository: ram02z/tree-sitter-fish
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add downstream remote
+        id: downstream
+        env:
+          REPO: ${{ github.repository }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git remote add downstream "https://x-access-token:$TOKEN@github.com/$REPO.git"
+          git fetch downstream
+          git checkout downstream/main -- .github/LAST_UPSTREAM_COMMIT .github/LAST_TAG
+
+          LAST_COMMIT="$(cat .github/LAST_UPSTREAM_COMMIT)"
+          echo "last_commit=$LAST_COMMIT" >> "$GITHUB_OUTPUT"
+
+          LAST_TAG="$(cat .github/LAST_TAG)"
+          echo "last_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Check for new upstream commits
+        id: upstream
+        env:
+          LAST_COMMIT: ${{ steps.downstream.outputs.last_commit }}
+        run: |
+          CURRENT_COMMIT="$(git rev-parse HEAD)"
+          echo "current_commit=$CURRENT_COMMIT" >> "$GITHUB_OUTPUT"
+
+          if [ "+$LAST_COMMIT" != "+$CURRENT_COMMIT" ]; then
+            echo "Upstream commit SHA differs"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Upstream did not change"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout downstream files
+        if: steps.upstream.outputs.changed == 'true'
+        run: |
+          git checkout downstream/main -- .github/workflows/sync-upstream.yml .github/apply-patch.js README.md
+
+      - name: Setup Node.js
+        if: steps.upstream.outputs.changed == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: "18"
+          registry-url: https://registry.npmjs.org
+
+      - name: Apply patch
+        if: steps.upstream.outputs.changed == 'true'
+        id: patch
+        env:
+          LAST_TAG: ${{ steps.downstream.outputs.last_tag }}
+          CURRENT_COMMIT: ${{ steps.upstream.outputs.current_commit }}
+        run: node .github/apply-patch.js
+
+      - name: Commit files
+        if: steps.upstream.outputs.changed == 'true'
+        env:
+          NEXT_TAG: ${{ steps.patch.outputs.next_tag }}
+        run: |
+          git add .
+          git commit -m 'Setup deployment github actions'
+          git tag -a "$NEXT_TAG" -m "$NEXT_TAG"
+
+      - name: Setup emsdk
+        if: steps.upstream.outputs.changed == 'true'
+        uses: mymindstorm/setup-emsdk@v14
+
+      - name: Install packages
+        if: steps.upstream.outputs.changed == 'true'
+        run: npm install
+
+      - name: Build
+        if: steps.upstream.outputs.changed == 'true'
+        run: npm run build:wasm
+
+      - name: Push to downstream
+        if: steps.upstream.outputs.changed == 'true'
+        env:
+          NEXT_TAG: ${{ steps.patch.outputs.next_tag }}
+        run: |
+          git push --force downstream HEAD
+          git push --force downstream "$NEXT_TAG"
+
+      - name: Create GitHub Release
+        if: steps.upstream.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.patch.outputs.next_tag }}
+          name: ${{ steps.patch.outputs.next_tag }}
+          files: tree-sitter-fish.wasm
+          body: |
+            Original-Commit: ${{ steps.upstream.outputs.current_commit }}
+            Original-Version: ${{ steps.patch.outputs.upstream_version }}
+          prerelease: ${{ steps.patch.outputs.prerelease }}
+
+      - name: Publish to npm
+        if: steps.upstream.outputs.changed == 'true'
+        run: npm publish --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_KEY }}
