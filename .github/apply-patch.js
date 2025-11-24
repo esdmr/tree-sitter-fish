@@ -11,7 +11,7 @@ fs.rmSync('binding.gyp', {force: true});
 const newTsconfig = fs.readFileSync('tsconfig.json', 'utf8').replaceAll('nodenext', 'node');
 fs.writeFileSync('tsconfig.json', newTsconfig, 'utf8');
 
-const upstreamVersionMatch = pkg.version.match(/^(\d+)\.(\d+)\.(\d+)/);
+const upstreamVersionMatch = pkg.version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(\d+))?/);
 assert.ok(upstreamVersionMatch);
 
 const downstreamVersionMatch = process.env.LAST_TAG?.match(/^v(\d+)\.(\d+)\.(\d+)(?:-(\d+))?/);
@@ -22,14 +22,16 @@ let newVersion;
 if (
 	+upstreamVersionMatch[1] !== +downstreamVersionMatch[1] ||
 	+upstreamVersionMatch[2] !== +downstreamVersionMatch[2] ||
-	+upstreamVersionMatch[3] !== +downstreamVersionMatch[3] - 1
+	+upstreamVersionMatch[3] - (upstreamVersionMatch[4] ? 1 : 0) !==
+		+downstreamVersionMatch[3] - (upstreamVersionMatch[4] ? 1 : 0)
 ) {
 	// This commit bumped the package.json version.
 	newVersion = pkg.version;
 } else {
-	newVersion = downstreamVersionMatch[1] + '.' +
-		downstreamVersionMatch[2] + '.' +
-		downstreamVersionMatch[3] + '-' +
+	newVersion =
+		upstreamVersionMatch[1] + '.' +
+		upstreamVersionMatch[2] + '.' +
+		(+upstreamVersionMatch[3] + 1) + '-' +
 		(downstreamVersionMatch[4] ? +downstreamVersionMatch[4] + 1 : '1');
 }
 
