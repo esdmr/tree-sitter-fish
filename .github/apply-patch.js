@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const assert = require('node:assert');
 const fs = require('node:fs');
 const process = require('node:process');
@@ -23,7 +24,7 @@ if (
 	+upstreamVersionMatch[1] !== +downstreamVersionMatch[1] ||
 	+upstreamVersionMatch[2] !== +downstreamVersionMatch[2] ||
 	+upstreamVersionMatch[3] - (upstreamVersionMatch[4] ? 1 : 0) !==
-		+downstreamVersionMatch[3] - (upstreamVersionMatch[4] ? 1 : 0)
+		+downstreamVersionMatch[3] - (downstreamVersionMatch[4] ? 1 : 0)
 ) {
 	// This commit bumped the package.json version.
 	newVersion = pkg.version;
